@@ -1,0 +1,29 @@
+{
+    "author": "robisodd",
+    "dependencies": {},
+    "keywords": [],
+    "name": "dither-robisodd",
+    "pebble": {
+        "capabilities": [
+            ""
+        ],
+        "displayName": "Dither (robisodd)",
+        "enableMultiJS": true,
+        "messageKeys": [],
+        "projectType": "native",
+        "resources": {
+            "media": []
+        },
+        "sdkVersion": "3",
+        "targetPlatforms": [
+            "aplite",
+            "basalt",
+            "chalk"
+        ],
+        "uuid": "5f6a021e-bd03-47f1-8829-dcf72f563dec",
+        "watchapp": {
+            "watchface": false
+        }
+    },
+    "version": "1.5.0"
+}
