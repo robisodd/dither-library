@@ -1,5 +1,5 @@
-# dither-library
-24bit color -> 6bit color dithering library for Pebble.  
+# Dither Library for Pebble
+24bit color -> 6bit color dithering library for Pebble.  Tested on Aplite, Basalt and Chalk.  Should be forward compatible with Diorite, Emery and future watches.
 
 Draws a filled rectangle to the screen which is dithered from 24bit (3 channels of 8bit colors: red, green and blue) color down to Pebble's native 6bit color.  
 
