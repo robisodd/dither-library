@@ -1,6 +1,10 @@
 # dither-library
 Color dithering library for Pebble
 
+#Screenshots  
+![](Aplite.png)  
+![](Basalt-Color.png) ![](BasaltGrayscale.png)  
+![](ChalkColor.png) ![](ChalkGrayscale.png)  
 
 `fill_rect_dithered(ctx, rect, r, g, b)`  
 Input: A graphics context, a rect (absolute screen coordinates), and a 24bit RGB color  
