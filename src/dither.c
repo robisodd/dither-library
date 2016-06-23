@@ -18,6 +18,7 @@
 
  Version History:
           TODO: Release as an NPM Pebble package
+                Consider updating to work with antialiasing
           
    v6-20160623: Created replace_color_in_rect_with_dithered()
                 Removed all single-pixel functions
