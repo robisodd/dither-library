@@ -18,7 +18,11 @@
 
  Version History:
           TODO: Release as an NPM Pebble package
-                Consider updating to work with antialiasing
+          
+   v7-20160624: Converted dither_table from 0-63 to 0-252 (*4)
+                  This way, you don't have to divide by 4 during runtime
+                Updated dither function to work with new dither_table
+                Now 127 is 50% dither like it should be
           
    v6-20160623: Created replace_color_in_rect_with_dithered()
                 Removed all single-pixel functions
@@ -66,14 +70,14 @@
 #include "dither.h"
 
 static const uint8_t dither_table[8][8] = {
-  { 0, 32,  8, 40,  2, 34, 10, 42}, /* 8x8 Bayer ordered dithering */
-  {48, 16, 56, 24, 50, 18, 58, 26}, /* pattern. Each input pixel */
-  {12, 44,  4, 36, 14, 46,  6, 38}, /* is scaled to the 0..63 range */
-  {60, 28, 52, 20, 62, 30, 54, 22}, /* before looking in this table */
-  { 3, 35, 11, 43,  1, 33,  9, 41}, /* to determine the action. */
-  {51, 19, 59, 27, 49, 17, 57, 25},
-  {15, 47,  7, 39, 13, 45,  5, 37},
-  {63, 31, 55, 23, 61, 29, 53, 21}
+  {  0, 128,  32, 160,   8, 136,  40, 168}, /* 8x8 Bayer ordered dithering */
+  {192,  64, 224,  96, 200,  72, 232, 104}, /* pattern. Each input pixel */
+  { 48, 176,  16, 144,  56, 184,  24, 152}, /* is scaled to the 0..63 range */
+  {240, 112, 208,  80, 248, 120, 216,  88}, /* before looking in this table */
+  { 12, 140,  44, 172,   4, 132,  36, 164}, /* to determine the action. */
+  {204,  76, 236, 108, 196,  68, 228, 100},
+  { 60, 188,  28, 156,  52, 180,  20, 148}, // 0..63 * 4 = 0..252
+  {252, 124, 220,  92, 244, 116, 212,  84}  // *4 instead of /4 during runtime
 };
 
 
@@ -86,7 +90,6 @@ void replace_color_in_rect_with_dithered(GContext *ctx, GRect rect, GColor repla
     
     #if defined(PBL_BW)                                       // Calculate intensity now instead of inside loop
       uint8_t intensity = (r+r+r+b+g+g+g+g) >> 3;             // intensity = Average RGB into a single 0-255 "brightness" value
-     intensity = (intensity + 5) / 4 - 1;                     // convert to a 0-64 value to compare against dither_table
     #endif
     
     // Section 1: Bounds Checking and Iteration
@@ -106,18 +109,18 @@ void replace_color_in_rect_with_dithered(GContext *ctx, GRect rect, GColor repla
           if(!(info.data[x/8] & (1<<(x%8))) == !(replacement_color.argb&1)  // If screen pixel color = replacement_color
             || !replacement_color.argb) {                                   //   or if replacement_color = 0 (see Note2 above)
             if(intensity > dither_table[x&7][y&7])                          //   Then, if dither says to color white
-              info.data[x/8] |= 1 << (x%8);                                 //     Then Color pixel White
-            else                                                            //   Else
-              info.data[x/8] &= ~(1 << (x%8));                              //     Color pixel Black
+              info.data[x/8] |= 1 << (x%8);                                 //     Then: Draw a White pixel (by bitwise-OR)
+            else                                                            //   Else:
+              info.data[x/8] &= ~(1 << (x%8));                              //     Draw a Black pixel (by bitwise-AND)
           }
-        #elif defined(PBL_COLOR)                                            // Verified works on Basalt and Chalk
+        #elif defined(PBL_COLOR)                                            // Color (Verified works on Basalt and Chalk)
           if(info.data[x]==replacement_color.argb                           // If pixel color matches (doesn't ignore alpha)
              || !replacement_color.argb) {                                  //   or if replacement_color = 0 (see Note2 above)
             uint8_t d = dither_table[x&7][y&7];                             // Speed things up slightly
             info.data[x] = 0b11000000 +                                     // Replace screen pixel with dither: Alpha part
-              ((64*(r%85)/85 > d ? r/85+1 : r/85)<<4) +                     //   Red part
-              ((64*(g%85)/85 > d ? g/85+1 : g/85)<<2) +                     //   Green part
-              ((64*(b%85)/85 > d ? b/85+1 : b/85)   );                      //   Blue part
+              ((256*(r%85)/85 > d ? r/85+1 : r/85)<<4) +                    //   Red part
+              ((256*(g%85)/85 > d ? g/85+1 : g/85)<<2) +                    //   Green part
+              ((256*(b%85)/85 > d ? b/85+1 : b/85)   );                     //   Blue part
           }
         #endif
       }

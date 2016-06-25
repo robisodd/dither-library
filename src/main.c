@@ -4,11 +4,17 @@
 // Global variables for the demo part
 static Window *main_window;
 static Layer *dither_layer, *text_layer;
-uint8_t color[3] = {127, 127, 127};  // Start colors in the middle
-enum {red, green, blue};             // for color[] above
-enum {gray};                         // for color[] above, but just uses "red" channel
-uint8_t grayscale = false;           // Allows 2-bit grayscale on color displays (ignored on B&W)
-uint8_t cursor = 0;                  // Position for RGB caret
+uint8_t color[3] = {127, 127, 127};          // Start colors in the middle
+enum {red, green, blue};                     // for color[] above
+enum {gray};                                 // for color[] above, but just uses "red" channel
+
+uint8_t grayscale = false;                   // Allows 2-bit grayscale on color displays (ignored on B&W)
+                                             //   Honestly, all the code below would look better if I could
+                                             //   come up with a word that conveys "the opposite of grayscale".
+                                             //   Then I could set this to TRUE and get rid of all the inversions
+                                             //   in the forms of "!grayscale" and "~grayscale"
+
+uint8_t cursor = 0;                          // Position for RGB caret
 uint8_t cursormax = PBL_IF_COLOR_ELSE(3, 1); // 3 cursor positions for color, just the 1 for B&W
 
 
@@ -48,15 +54,18 @@ static void text_layer_update(Layer *layer, GContext *ctx) {
     GRect text_rect = GRect((bounds.size.w - text_size.w)/2, (bounds.size.h - text_size.h)/2, text_size.w, text_size.h);
   
     // Set Replacement Color
-    // Make sure text color isn't anywhere else, stopping accidental replacements
+    // Making sure text color isn't anywhere else within the rect (to prevent accidental replacements)
     GColor replace = (color[red]>127 || color[green]>127 || color[blue]>127) ? GColorOxfordBlue : GColorCeleste;
       
     // Write Text in the "Color To Be Replaced"
     graphics_context_set_text_color(ctx, replace);
-    graphics_draw_text(ctx, text, font, text_rect, GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+    graphics_draw_text(ctx, text, font, text_rect, GTextOverflowModeTrailingEllipsis, grayscale ? GTextAlignmentCenter : GTextAlignmentLeft, NULL);
 
     // Replace the color the text was drawn in (limiting to the text_rect region)
-    replace_color_in_rect_with_dithered(ctx, text_rect, replace, 128+color[red], 128+color[green], 128+color[blue]);
+    if(!grayscale)
+      replace_color_in_rect_with_dithered(ctx, text_rect, replace, 128+color[red], 128+color[green], 128+color[blue]);
+    else
+      replace_color_in_rect_with_dithered(ctx, text_rect, replace, 128+color[gray], 128+color[gray], 128+color[gray]);
   #else
     // Set up text box
     text_size.h += 10; text_size.w += 10;    // Add some nice padding on B&W
@@ -80,10 +89,10 @@ static void text_layer_update(Layer *layer, GContext *ctx) {
 // ------------------------------------------------------------------------------------------------------------------------------------------------ //
 //  Button Functions
 // ------------------------------------------------------------------------ //
-static void     up_single_click_handler(ClickRecognizerRef recognizer, void *context) {color[cursor & ~grayscale]++;      layer_mark_dirty(dither_layer);}
+static void     up_single_click_handler(ClickRecognizerRef recognizer, void *context) {color[cursor & ~grayscale]++;      layer_mark_dirty(dither_layer);} // Increase value
 static void select_single_click_handler(ClickRecognizerRef recognizer, void *context) {cursor = (cursor + 1) % cursormax; layer_mark_dirty(dither_layer);} // Advance cursor (if color)
 static void   select_long_click_handler(ClickRecognizerRef recognizer, void *context) {grayscale = ~grayscale;            layer_mark_dirty(dither_layer);} // Hold to toggle grayscale (on color Pebbles)
-static void   down_single_click_handler(ClickRecognizerRef recognizer, void *context) {color[cursor & ~grayscale]--;      layer_mark_dirty(dither_layer);}
+static void   down_single_click_handler(ClickRecognizerRef recognizer, void *context) {color[cursor & ~grayscale]--;      layer_mark_dirty(dither_layer);} // Decrease value
 
 
 static void click_config_provider(void *context) {
@@ -103,9 +112,9 @@ static void main_window_load(Window *window) {
   window_set_background_color(main_window, GColorBlack);
   window_set_click_config_provider(main_window, click_config_provider);
 
-  dither_layer = layer_create(layer_get_frame(root_layer));
-//   dither_layer = layer_create(GRect((layer_get_bounds(root_layer).size.w - 100) / 2,20,100,100)); // Non-fullscreen
-//   dither_layer = layer_create(GRect( 100,20,100,100));  // testing out-of-bounds
+  dither_layer = layer_create(layer_get_frame(root_layer));  // fullscreen
+  // dither_layer = layer_create(GRect((layer_get_bounds(root_layer).size.w - 100) / 2,20,100,100)); // Non-fullscreen
+  // dither_layer = layer_create(GRect( 100,20,100,100));   // testing out-of-bounds
   layer_add_child(root_layer, dither_layer);
   layer_set_update_proc(dither_layer, dither_layer_update);
 
